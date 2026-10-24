@@ -20,7 +20,8 @@ with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) a
         archive.write(engine / name, name)
     for pattern in ['*.gd', '*.gd.uid', '*.tscn', '*.godot', '*.md']:
         for path in (root / 'demo').glob(pattern):
-            archive.write(path, 'demo/' + path.name)
+            if path.is_file():
+                archive.write(path, 'demo/' + path.name)
     with zipfile.ZipFile(addon) as source:
         for entry in source.infolist():
             archive.writestr('demo/' + entry.filename, source.read(entry))
