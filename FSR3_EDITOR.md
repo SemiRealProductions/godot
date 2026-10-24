@@ -60,8 +60,14 @@ logic is preserved; this is not an image-quality or ghosting fix.
 
 Follow misc/fsr3-gdextension/README.md. Git source contains no editor binaries,
 generated API dumps, build caches, compiled addon libraries, test captures,
-Windows AMD driver DLLs or toolchain downloads. Release assets contain the tested
-Linux editor, ready-to-run demo/addon, licenses and checksums separately from Git.
+Windows AMD driver DLLs or toolchain downloads. Release assets contain Linux and
+Windows native editors, matching addons, a standalone cross-platform demo,
+complete source with the pinned godot-cpp contents, licenses and checksums
+separately from Git. Both editor ZIPs include the ready-to-run demo and their
+matching addon. Source ZIPs contain only committed files, with no build caches.
 
-Linux FSR 3.1.4 / Forward+ / Vulkan is the release target. Native Linux FSR4 is
-not implemented. The experimental API is not compatible with stock Godot builds.
+Native Linux FSR 3.1.4 / Forward+ / Vulkan is GPU-tested. Native Windows x86_64
+editors/addons are cross-compiled using LLVM-MinGW; execution on a native Windows
+GPU host is not validated here, and no Wine testing is used for this release.
+Native Linux FSR4 is not implemented. The experimental API is not compatible
+with stock Godot builds.
