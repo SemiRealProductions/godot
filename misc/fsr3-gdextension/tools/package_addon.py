@@ -31,6 +31,7 @@ with zipfile.ZipFile(args.output, 'w', zipfile.ZIP_DEFLATED) as archive:
         path = root / name
         if path.is_file(): archive.write(path, f'addons/fsr3/licenses/{name}')
     archive.write(root/'thirdparty/vulkan-headers/LICENSE.md', 'addons/fsr3/licenses/LICENSE-Vulkan-Headers.md')
+    archive.write(root/'godot-cpp/LICENSE.md', 'addons/fsr3/licenses/LICENSE-godot-cpp.md')
     for vendor in ['amd-ffx', 'amd-fidelityfx-api']:
       for path in (root / 'thirdparty' / vendor).rglob('*'):
         if path.is_file() and ('license' in path.name.lower() or path.suffix in ['.cpp','.h','.glsl']):
