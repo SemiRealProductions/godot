@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package built-in editors, addon-free demo and complete ZIP/tar.gz source."""
+"""Package built-in editors, debug/release templates, demo and complete source."""
 import argparse
 from pathlib import Path
 import subprocess
@@ -8,8 +8,42 @@ import zipfile
 import tarfile
 import io
 import stat
+import json
 
-from package_editor import ROOT, ENGINE, demo_files, package_editor, write_checksums
+from package_editor import ROOT, ENGINE, build_info, demo_files, package_editor, write_checksums
+
+
+def package_templates(platform, release):
+    label = 'Linux' if platform == 'linux' else 'Windows'
+    engine_platform = 'linuxbsd' if platform == 'linux' else 'windows'
+    suffix = '' if platform == 'linux' else '.llvm.exe'
+    commit = subprocess.check_output(['git', '-C', str(ENGINE), 'rev-parse', 'HEAD'], text=True).strip()
+    output = release / f'Godot-FSR3-Builtin-Export-Templates-{label}-x86_64.zip'
+    metadata = []
+    with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+        for target in ['template_debug', 'template_release']:
+            binary = ENGINE / 'bin' / f'godot.{engine_platform}.{target}.x86_64{suffix}'
+            if not binary.is_file() or commit.encode() not in binary.read_bytes():
+                raise SystemExit(f'Build {binary.name} at the release commit before packaging')
+            archive.write(binary, binary.name)
+            metadata.append(build_info(binary, platform, commit))
+            if platform == 'windows':
+                helper = binary.with_name(binary.name.replace('.exe', '.console.exe'))
+                if not helper.is_file():
+                    raise SystemExit(f'Missing Windows console helper {helper.name}')
+                archive.write(helper, helper.name)
+        for filename in ['LICENSE.txt', 'COPYRIGHT.txt']:
+            archive.write(ENGINE / filename, filename)
+        archive.writestr('BUILD_INFO.json', json.dumps(metadata, indent=2) + '\n')
+        archive.writestr('README.txt',
+            f'Godot built-in FSR 3.1.4 export templates ({label} x86_64).\n'
+            'Extract this ZIP to a permanent directory. In the matching editor, open Export, '
+            'add the platform preset, then set Custom Template > Debug and Release to the '
+            'template_debug and template_release binaries. Keep Windows console helpers beside their EXEs.\n'
+            'This is a per-platform custom-template ZIP, not an installable all-platform TPZ.\n'
+            'Forward+/Vulkan and source FSR3 are included. No FSR addon or AMD runtime DLL is required.\n'
+            f'Source commit: {commit}\n')
+    return [output]
 
 
 def package_source(release):
@@ -62,6 +96,8 @@ def main():
     release = args.output_dir.resolve()
     release.mkdir(parents=True, exist_ok=True)
     paths = package_editor('linux', release) + package_editor('windows', release)
+    paths.extend(package_templates('linux', release))
+    paths.extend(package_templates('windows', release))
     demo = release / 'FSR3-Temporal-Artifact-Lab.zip'
     with zipfile.ZipFile(demo, 'w', zipfile.ZIP_DEFLATED) as archive:
         for path in demo_files():

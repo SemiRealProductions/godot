@@ -2,12 +2,25 @@
 """Package a native Linux or Windows editor with built-in FSR3."""
 import argparse
 import hashlib
+import json
 from pathlib import Path
+import re
 import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 ENGINE = ROOT.parent.parent
+
+
+def build_info(binary, platform, commit):
+    info = {'source_commit': commit, 'platform': platform, 'architecture': 'x86_64',
+            'fsr': '3.1.4 source, built in', 'binary': binary.name,
+            'sha256': hashlib.sha256(binary.read_bytes()).hexdigest()}
+    if platform == 'linux':
+        versions = subprocess.check_output(['readelf', '--version-info', str(binary)], text=True)
+        glibc = re.findall(r'GLIBC_(\d+(?:\.\d+)+)', versions)
+        info['minimum_glibc'] = max(glibc, key=lambda version: tuple(map(int, version.split('.'))))
+    return info
 
 
 def demo_files():
@@ -28,6 +41,14 @@ def package_editor(platform, release):
     commit = subprocess.check_output(['git', '-C', str(ENGINE), 'rev-parse', 'HEAD'], text=True).strip()
     if commit.encode() not in binary.read_bytes():
         raise SystemExit(f'{binary.name} does not embed the release commit. Rebuild/relink this editor before packaging.')
+    info = build_info(binary, platform, commit)
+    if platform == 'linux':
+        probe = subprocess.run([str(binary), '--display-driver', 'fsr3-backend-check'],
+                               capture_output=True, text=True)
+        available = probe.stdout.lower() + probe.stderr.lower()
+        if 'x11' not in available or 'wayland' not in available:
+            raise SystemExit('The release Linux editor must include both X11 and Wayland')
+        info['display_backends'] = ['x11', 'wayland', 'headless']
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         archive.write(binary, binary.name)
         if platform == 'windows':
@@ -38,6 +59,7 @@ def package_editor(platform, release):
         for filename in ['LICENSE.txt', 'COPYRIGHT.txt', 'FSR3_EDITOR.md']:
             archive.write(ENGINE / filename, filename)
         archive.write(ENGINE / 'modules/fsr3/README.md', 'FSR3-BUILTIN.md')
+        archive.writestr('BUILD_INFO.json', json.dumps(info, indent=2) + '\n')
         validation = 'Native Linux Vulkan GPU rendering tested on RX 9070 XT / RADV.' if platform == 'linux' else 'Cross-compiled native Windows binaries; native Windows GPU execution untested.'
         archive.writestr('README.txt', f'Godot built-in FSR 3.1.4 editor ({label} x86_64).\nRun {name} and open your project. Select Forward+ and Rendering > Scaling 3D > Mode > FSR 3.1.4.\nNo FSR addon, autoload or AMD runtime DLL is needed. Remove the old addon before using this branch.\nDownload the demo separately. Exporting requires matching built-in export templates.\nNative Linux FSR4 and frame generation are not included.\n{validation}\nSource commit: {commit}\n')
     return [output]

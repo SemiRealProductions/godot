@@ -67,6 +67,32 @@ python3 modules/fsr3/tests/test_binary_backend.py --engine bin/godot.linuxbsd.ed
 python3 modules/fsr3/tests/run_export_test.py
 ```
 
+## Release builds
+
+Build all six targets at the same source commit: Linux and Windows editors,
+plus `template_debug` and `template_release` for each platform. Linux releases
+must include both X11 and Wayland in one editor. The backend is selected at
+startup or with the editor's **Prefer Wayland** setting and a restart.
+
+For portable Linux binaries, use an isolated Ubuntu 22.04 build environment
+with `build-essential`, `pkg-config`, `python3`, `python3-pip`, `git`,
+`libwayland-bin` and SCons 4.11.0. Build with `x11=yes wayland=yes` and keep
+its objects separate from host builds. Windows uses the pinned LLVM-MinGW
+20261020 compiler with Vulkan enabled and `d3d12=no`.
+
+After all targets have been built, run:
+
+```sh
+python3 misc/fsr3-gdextension/tools/package_release.py
+```
+
+The output contains editor ZIPs, per-platform debug/release template ZIPs,
+the addon-free demo, complete source ZIP/tar.gz and SHA256SUMS.txt.
+BUILD_INFO.json records the revision and each Linux binary's required glibc
+version. Template ZIPs are selected with the export preset's Custom Template
+fields; they are not all-platform TPZ installers. Complete native GPU/export
+validation before publishing with `gh release create`.
+
 The binary callback test uses an explicitly synthetic green-output provider.
 It proves Vulkan interop and lifetime handling, not AMD FSR4 execution.
 
