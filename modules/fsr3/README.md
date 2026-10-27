@@ -76,7 +76,7 @@ startup or with the editor's **Prefer Wayland** setting and a restart.
 
 For portable Linux binaries, use an isolated Ubuntu 22.04 build environment
 with `build-essential`, `pkg-config`, `python3`, `python3-pip`, `git`,
-`libwayland-bin` and SCons 4.11.0. Build with `x11=yes wayland=yes` and keep
+`libwayland-bin`, SCons 4.11.0 and the Python `zstandard` module. Build with `x11=yes wayland=yes` and keep
 its objects separate from host builds. Windows uses the pinned LLVM-MinGW
 20261020 compiler with Vulkan enabled and `d3d12=no`.
 
