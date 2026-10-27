@@ -3789,7 +3789,7 @@ void RenderingServer::init() {
 		String mode_hints;
 		String mode_hints_metal;
 		{
-			Vector<String> mode_hints_arr = { "Nearest (Fastest):5", "Bilinear (Fastest):0", "FSR 1.0 (Fast):1", "FSR 2.2 (Slow):2" };
+			Vector<String> mode_hints_arr = { "Nearest (Fastest):5", "Bilinear (Fastest):0", "FSR 1.0 (Fast):1", "FSR 2.2 (Slow):2", "FSR 3.1.4:7" };
 			mode_hints = String(",").join(mode_hints_arr);
 
 			mode_hints_arr.push_back("MetalFX (Spatial - Fast):3");
@@ -3803,6 +3803,10 @@ void RenderingServer::init() {
 	}
 	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "rendering/scaling_3d/scale", PROPERTY_HINT_RANGE, "0.1,2.0,0.0001"), 1.0);
 	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "rendering/scaling_3d/fsr_sharpness", PROPERTY_HINT_RANGE, "0,2,0.01"), 0.2f);
+	GLOBAL_DEF(PropertyInfo(Variant::INT, "rendering/scaling_3d/fsr3/backend", PROPERTY_HINT_ENUM, "Source FSR 3.1.4,External AMD runtime (Vulkan)"), 0);
+	GLOBAL_DEF(PropertyInfo(Variant::STRING, "rendering/scaling_3d/fsr3/library_path", PROPERTY_HINT_FILE, "*.dll,*.so"), "");
+	GLOBAL_DEF("rendering/scaling_3d/fsr3/preferred_version", "");
+	GLOBAL_DEF("rendering/scaling_3d/fsr3/allow_source_fallback", true);
 
 	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "rendering/textures/default_filters/texture_mipmap_bias", PROPERTY_HINT_RANGE, "-2,2,0.001"), 0.0f);
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "rendering/textures/decals/filter", PROPERTY_HINT_ENUM, "Nearest (Fast),Linear (Fast),Nearest Mipmap (Fast),Linear Mipmap (Fast),Nearest Mipmap Anisotropic (Average),Linear Mipmap Anisotropic (Average)"), RSE::DECAL_FILTER_LINEAR_MIPMAPS);

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package a native Linux or Windows editor with its matching addon and demo."""
+"""Package a native Linux or Windows editor with built-in FSR3."""
 import argparse
 import hashlib
 from pathlib import Path
@@ -21,11 +21,10 @@ def package_editor(platform, release):
     label = 'Linux' if platform == 'linux' else 'Windows'
     name = 'godot.linuxbsd.editor.x86_64' if platform == 'linux' else 'godot.windows.editor.x86_64.llvm.exe'
     binary = ENGINE / 'bin' / name
-    addon = ROOT / f'build/fsr3-{platform}-x86_64.zip'
-    if not binary.is_file() or not addon.is_file():
-        raise SystemExit(f'Build the {platform} editor and addon ZIP first')
+    if not binary.is_file():
+        raise SystemExit(f'Build the {platform} built-in editor first')
     release.mkdir(parents=True, exist_ok=True)
-    output = release / f'Godot-FSR3-Custom-Editor-{label}-x86_64.zip'
+    output = release / f'Godot-FSR3-Builtin-Editor-{label}-x86_64.zip'
     commit = subprocess.check_output(['git', '-C', str(ENGINE), 'rev-parse', 'HEAD'], text=True).strip()
     if commit.encode() not in binary.read_bytes():
         raise SystemExit(f'{binary.name} does not embed the release commit. Rebuild/relink this editor before packaging.')
@@ -38,26 +37,10 @@ def package_editor(platform, release):
             archive.write(helper, helper.name)
         for filename in ['LICENSE.txt', 'COPYRIGHT.txt', 'FSR3_EDITOR.md']:
             archive.write(ENGINE / filename, filename)
-        for path in demo_files():
-            archive.write(path, 'demo/' + path.name)
-        with zipfile.ZipFile(addon) as source:
-            for entry in source.infolist():
-                archive.writestr('demo/' + entry.filename, source.read(entry))
-        if platform == 'linux':
-            launcher = zipfile.ZipInfo('Open-FSR3-Lab.sh')
-            launcher.create_system = 3
-            launcher.external_attr = 0o100755 << 16
-            archive.writestr(launcher, '#!/usr/bin/env bash\nset -euo pipefail\nrelease_dir=$(cd -- "$(dirname -- "$0")" && pwd)\nexec "$release_dir/godot.linuxbsd.editor.x86_64" --editor --path "$release_dir/demo" --rendering-method forward_plus --rendering-driver vulkan "$@"\n')
-            launch = './Open-FSR3-Lab.sh'
-            validation = 'Native Linux Vulkan GPU rendering was tested on RX 9070 XT / RADV.'
-        else:
-            archive.writestr('Open-FSR3-Lab.cmd', '@echo off\r\n"%~dp0godot.windows.editor.x86_64.llvm.exe" --editor --path "%~dp0demo" --rendering-method forward_plus --rendering-driver vulkan %*\r\n')
-            launch = 'Open-FSR3-Lab.cmd'
-            validation = 'Native Windows binaries were cross-compiled on Linux; Windows GPU execution has not been tested.'
-        archive.writestr('README.txt', f'Experimental Godot custom FSR3 editor ({label} x86_64).\nExtract the ZIP and run {launch}, let the editor import, then press F5.\nThe included demo/addon uses source FSR 3.1.4 through Forward+/Vulkan.\nFSR3 is supplied by the addon, not enabled globally in every project.\nNo external AMD runtime DLL is required for source FSR3.\nNative Linux FSR4 and frame generation are not included.\n{validation}\nSource commit: {commit}\n')
-    addon_copy = release / addon.name
-    addon_copy.write_bytes(addon.read_bytes())
-    return [output, addon_copy]
+        archive.write(ENGINE / 'modules/fsr3/README.md', 'FSR3-BUILTIN.md')
+        validation = 'Native Linux Vulkan GPU rendering tested on RX 9070 XT / RADV.' if platform == 'linux' else 'Cross-compiled native Windows binaries; native Windows GPU execution untested.'
+        archive.writestr('README.txt', f'Godot built-in FSR 3.1.4 editor ({label} x86_64).\nRun {name} and open your project. Select Forward+ and Rendering > Scaling 3D > Mode > FSR 3.1.4.\nNo FSR addon, autoload or AMD runtime DLL is needed. Remove the old addon before using this branch.\nDownload the demo separately. Exporting requires matching built-in export templates.\nNative Linux FSR4 and frame generation are not included.\n{validation}\nSource commit: {commit}\n')
+    return [output]
 
 
 def write_checksums(paths, release):
@@ -69,7 +52,7 @@ def write_checksums(paths, release):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--platform', choices=['linux', 'windows', 'all'], default='linux')
-    parser.add_argument('--output-dir', type=Path, default=ENGINE / 'bin/fsr3-release')
+    parser.add_argument('--output-dir', type=Path, default=ENGINE / 'bin/fsr3-builtin-release')
     args = parser.parse_args()
     paths = []
     for platform in (['linux', 'windows'] if args.platform == 'all' else [args.platform]):

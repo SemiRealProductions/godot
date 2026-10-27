@@ -108,6 +108,7 @@ public:
 		SCALING_3D_MODE_METALFX_TEMPORAL,
 		SCALING_3D_MODE_NEAREST,
 		SCALING_3D_MODE_CUSTOM,
+		SCALING_3D_MODE_FSR3,
 		SCALING_3D_MODE_MAX
 	};
 
@@ -327,7 +328,14 @@ private:
 	Scaling3DMode scaling_3d_mode = SCALING_3D_MODE_BILINEAR;
 	float scaling_3d_scale = 1.0;
 	Ref<ViewportUpscaler> scaling_3d_custom_upscaler;
+	Ref<ViewportUpscaler> builtin_fsr3_upscaler;
 	float fsr_sharpness = 0.2f;
+	int fsr3_backend = 0;
+	String fsr3_library_path;
+	String fsr3_preferred_version;
+	bool fsr3_allow_source_fallback = true;
+	void _update_fsr3_upscaler();
+	void _set_scaling_3d_upscaler(const Ref<ViewportUpscaler> &p_upscaler);
 	float texture_mipmap_bias = 0.0f;
 	AnisotropicFiltering anisotropic_filtering_level = ANISOTROPY_4X;
 	bool use_debanding = false;
@@ -614,6 +622,16 @@ public:
 
 	void set_scaling_3d_custom_upscaler(const Ref<ViewportUpscaler> &p_upscaler);
 	Ref<ViewportUpscaler> get_scaling_3d_custom_upscaler() const;
+
+	void set_fsr3_backend(int p_backend);
+	int get_fsr3_backend() const;
+	void set_fsr3_library_path(const String &p_path);
+	String get_fsr3_library_path() const;
+	void set_fsr3_preferred_version(const String &p_version);
+	String get_fsr3_preferred_version() const;
+	void set_fsr3_allow_source_fallback(bool p_enabled);
+	bool is_fsr3_source_fallback_allowed() const;
+	Ref<ViewportUpscaler> get_fsr3_upscaler() const;
 
 	void set_fsr_sharpness(float p_fsr_sharpness);
 	float get_fsr_sharpness() const;
