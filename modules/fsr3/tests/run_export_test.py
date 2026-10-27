@@ -17,8 +17,9 @@ def main():
     args = parser.parse_args()
     output = ROOT / "bin/fsr3-export-test"
     output.mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="fsr3-builtin-export-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="fsr3-builtin-export-") as temporary, tempfile.TemporaryDirectory(prefix="fsr3-builtin-cache-") as cache:
         project = Path(temporary)
+        editor_env = dict(os.environ, XDG_CACHE_HOME=cache)
         for source in (ROOT / "misc/fsr3-gdextension/demo").iterdir():
             if source.is_file() and not source.is_symlink():
                 shutil.copy2(source, project / source.name)
@@ -32,7 +33,7 @@ def main():
                             ("export", ["--export-release", "Linux Builtin Test", str(output / "demo.x86_64")])]:
             with (output / (name + ".log")).open("w") as log:
                 result = subprocess.run([str(args.engine.resolve()), "--headless", "--path", str(project)] + extra,
-                                        stdout=log, stderr=subprocess.STDOUT, timeout=180)
+                                        env=editor_env, stdout=log, stderr=subprocess.STDOUT, timeout=180)
             text = (output / (name + ".log")).read_text()
             print(name, text[-1200:], flush=True)
             if result.returncode or "ERROR:" in text:

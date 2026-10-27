@@ -17,6 +17,7 @@ Native Linux x86_64, RX 9070 XT / RADV, Forward+ / Vulkan 1.4.354.
 | Synthetic external Vulkan provider | 89 dispatches; green GPU output, resize, provider selection, fallback and balanced context destruction passed |
 | Addon-free artifact lab in editor build | 269 FSR frames, 2,152 GPU passes, 5 contexts, 0 failures |
 | Exported addon-free release game | Same artifact-lab counts, 0 failures; executable + PCK, no extension .so/.dll |
+| Cold-cache command-line import/export | Deferred documentation callback safely skips a deleted EditorNode |
 | API reference XML | No warnings/errors with all module/platform reference types loaded |
 
 Logs, captures and exported test binaries are under the ignored engine `bin/`
