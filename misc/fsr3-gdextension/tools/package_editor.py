@@ -103,7 +103,7 @@ def package_editor(platform, release, fidelityfx_sdk=DEFAULT_FIDELITYFX_SDK):
             if not helper.is_file():
                 raise SystemExit('Build the Windows console helper first')
             archive.write(helper, helper.name)
-        for filename in ['LICENSE.txt', 'COPYRIGHT.txt', 'FSR3_EDITOR.md']:
+        for filename in ['LICENSE.txt', 'COPYRIGHT.txt', 'README.md']:
             archive.write(ENGINE / filename, filename)
         archive.write(ENGINE / 'modules/fsr3/README.md', 'FSR3-BUILTIN.md')
         archive.writestr('BUILD_INFO.json', json.dumps(info, indent=2) + '\n')
