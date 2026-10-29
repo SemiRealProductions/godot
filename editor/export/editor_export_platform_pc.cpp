@@ -101,22 +101,28 @@ bool EditorExportPlatformPC::has_valid_export_configuration(const Ref<EditorExpo
 	String err;
 	bool valid = false;
 
-	// Look for export templates (first official, and if defined custom templates).
+	// Custom templates take precedence over official templates for each build type.
 	String arch = p_preset->get("binary_format/architecture");
-	bool dvalid = exists_export_template(get_template_file_name("debug", arch), &err);
-	bool rvalid = exists_export_template(get_template_file_name("release", arch), &err);
+	String custom_debug = String(p_preset->get("custom_template/debug")).strip_edges();
+	String custom_release = String(p_preset->get("custom_template/release")).strip_edges();
 
-	if (p_preset->get("custom_template/debug") != "") {
-		dvalid = FileAccess::exists(p_preset->get("custom_template/debug"));
+	bool dvalid;
+	if (!custom_debug.is_empty()) {
+		dvalid = FileAccess::exists(custom_debug);
 		if (!dvalid) {
-			err += TTR("Custom debug template not found.") + "\n";
+			err += vformat(TTR("Custom debug template not found: \"%s\"."), custom_debug) + "\n";
 		}
+	} else {
+		dvalid = exists_export_template(get_template_file_name("debug", arch), &err);
 	}
-	if (p_preset->get("custom_template/release") != "") {
-		rvalid = FileAccess::exists(p_preset->get("custom_template/release"));
+	bool rvalid;
+	if (!custom_release.is_empty()) {
+		rvalid = FileAccess::exists(custom_release);
 		if (!rvalid) {
-			err += TTR("Custom release template not found.") + "\n";
+			err += vformat(TTR("Custom release template not found: \"%s\"."), custom_release) + "\n";
 		}
+	} else {
+		rvalid = exists_export_template(get_template_file_name("release", arch), &err);
 	}
 
 	valid = dvalid || rvalid;
