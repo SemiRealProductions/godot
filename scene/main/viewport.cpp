@@ -5564,12 +5564,12 @@ void Viewport::_bind_methods() {
 
 #ifndef _3D_DISABLED
 	ADD_GROUP("Scaling 3D", "");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "scaling_3d_mode", PROPERTY_HINT_ENUM, "Nearest (Fastest):5,Bilinear (Fastest):0,FSR 1.0 (Fast):1,FSR 2.2 (Slow):2,MetalFX (Spatial - Fast):3,MetalFX (Temporal - Slow):4,Custom:6,FSR 3.1.4:7"), "set_scaling_3d_mode", "get_scaling_3d_mode");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "scaling_3d_mode", PROPERTY_HINT_ENUM, "Nearest (Fastest):5,Bilinear (Fastest):0,FSR 1.0 (Fast):1,FSR 2.2 (Slow):2,MetalFX (Spatial - Fast):3,MetalFX (Temporal - Slow):4,Custom:6,FSR 3.1.6:7"), "set_scaling_3d_mode", "get_scaling_3d_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "scaling_3d_scale", PROPERTY_HINT_RANGE, "0.1,2.0,0.0001"), "set_scaling_3d_scale", "get_scaling_3d_scale");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "scaling_3d_custom_upscaler", PROPERTY_HINT_RESOURCE_TYPE, "ViewportUpscaler"), "set_scaling_3d_custom_upscaler", "get_scaling_3d_custom_upscaler");
 	ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "texture_mipmap_bias", PROPERTY_HINT_RANGE, "-2,2,0.001"), "set_texture_mipmap_bias", "get_texture_mipmap_bias");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "anisotropic_filtering_level", PROPERTY_HINT_ENUM, String::utf8("Disabled (Fastest),2× (Faster),4× (Fast),8× (Average),16x (Slow)")), "set_anisotropic_filtering_level", "get_anisotropic_filtering_level");
-	ADD_PROPERTY(PropertyInfo(Variant::INT, "fsr3_backend", PROPERTY_HINT_ENUM, "Source FSR 3.1.4,External AMD runtime (Vulkan)"), "set_fsr3_backend", "get_fsr3_backend");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "fsr3_backend", PROPERTY_HINT_ENUM, "Source FSR 3.1.6,External AMD runtime (Vulkan)"), "set_fsr3_backend", "get_fsr3_backend");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "fsr3_library_path", PROPERTY_HINT_FILE, "*.dll,*.so"), "set_fsr3_library_path", "get_fsr3_library_path");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "fsr3_preferred_version"), "set_fsr3_preferred_version", "get_fsr3_preferred_version");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "fsr3_allow_source_fallback"), "set_fsr3_allow_source_fallback", "is_fsr3_source_fallback_allowed");

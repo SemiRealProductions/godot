@@ -1,13 +1,13 @@
-# Built-in FSR 3.1.4
+# Built-in FSR 3.1.6
 
-This module compiles the source FSR 3.1.4 upscaler and its shaders into the editor
+This module compiles the source FSR 3.1.6 upscaler and its shaders into the editor
 and export templates. It is enabled by default for Linux and Windows builds with
 3D support; `module_fsr3_enabled=no` excludes it. No addon, autoload, godot-cpp
 bindings or AMD runtime binary is required for source FSR3.
 
 ## Project and viewport settings
 
-Use Forward+ and select **FSR 3.1.4** under **Rendering → Scaling 3D → Mode**.
+Use Forward+ and select **FSR 3.1.6** under **Rendering → Scaling 3D → Mode**.
 Choose the existing scale and FSR sharpness settings. Scale 1.0 provides Native
 AA; 0.67 is Quality-style upscaling. FSR3 clamps scales above 1.0 to 1.0.
 The viewport owns the backend, configures jitter and suppresses the separate TAA
@@ -23,6 +23,8 @@ The native mode is a Viewport-level convenience over the existing generic
 RenderingServer Custom mode. RenderingServer clients creating raw viewport RIDs
 can continue assigning a built-in `FSR3Upscaler` resource through those hooks.
 
+See [SDK_2_4.md](SDK_2_4.md) for the FSR 3.1.6 port and native FSR4 investigation.
+
 ## Optional external runtime
 
 Under **Rendering → Scaling 3D → FSR3**, select the external AMD runtime backend
@@ -34,8 +36,11 @@ are exposed as `fsr3_*` viewport properties. Source is the default on both platf
 Libraries must be external files. On Windows, an empty path checks for
 `amd_fidelityfx_loader_vk.dll`, then `amd_fidelityfx_vk.dll`, beside the executable.
 No addon directory is used. Dependencies/providers stay alongside the loader.
-AMD runtime/driver DLLs are not distributed by this module. DLL naming alone does
-not establish compatibility; DX12-only providers need a separate integration.
+The Windows editor release package includes AMD FidelityFX SDK 2.4.0's
+redistributable Vulkan loader and upscaler DLLs plus AMD's license; the source
+module itself does not distribute runtime binaries. A compatible AMD Vulkan
+driver and the Microsoft Visual C++ runtime are also required. DLL naming alone
+does not establish compatibility; DX12-only providers need a separate integration.
 Windows PE DLLs cannot be used by native Linux. Native Linux FSR4 is not claimed.
 
 ## Migration and builds
@@ -56,8 +61,9 @@ scons platform=linuxbsd target=template_release debug_symbols=no -j6
 Rebuild matching export templates to export games using this feature. Existing
 templates from the GDExtension branch do not include these built-in classes.
 The Windows build uses the existing LLVM-MinGW toolchain with Vulkan enabled.
-Runtime GPU validation has been performed on Linux; native Windows execution
-requires separate testing. Native-AA, scale changes, resizing, mode switching,
+Runtime GPU validation has been performed on native Linux and with the Windows
+editor under Wine. Native Windows execution requires separate testing.
+Native-AA, scale changes, resizing, mode switching,
 SubViewports, source fallback and external callback lifetime are covered by tests.
 
 ```sh
@@ -83,8 +89,23 @@ its objects separate from host builds. Windows uses the pinned LLVM-MinGW
 After all targets have been built, run:
 
 ```sh
+git submodule update --init thirdparty/FidelityFX-SDK
 python3 misc/fsr3-gdextension/tools/package_release.py
 ```
+
+The SDK submodule is pinned to AMD's `v2.4.0` release
+(`7539ae8b6568ad29ed78a753404351daf3b5cca7`). Git records the exact commit, so
+ordinary editor checkouts do not move to a newer SDK release.
+
+Initialize the pinned SDK submodule with
+`git submodule update --init thirdparty/FidelityFX-SDK` before packaging.
+The packager uses this submodule as its only default SDK source; an alternate
+checkout can be explicitly selected with `--fidelityfx-sdk /path/to/FidelityFX-SDK`.
+It validates the two SDK 2.4.0 runtime DLL hashes and includes their license
+notice. Export templates and exported games do not contain these DLLs
+automatically. To use the optional runtime in an exported Windows game, copy the
+two DLLs and `AMD-FSR-SDK-LICENSE.md` from the editor package beside the game
+executable. Native Linux FSR4 is not provided by these Windows runtime files.
 
 The output contains editor ZIPs, per-platform debug/release template ZIPs,
 the addon-free demo, complete source ZIP/tar.gz and SHA256SUMS.txt.
@@ -112,3 +133,9 @@ https://github.com/godotengine/godot/pull/114670
 Godot/AMD MIT notices remain in the sources and the root LICENSE/COPYRIGHT files.
 SDK assertion symbols are prefixed in this module to coexist with Godot's FSR2
 SDK. No private bridge, AMD driver binary, frame generation or Wine is included.
+
+The FSR 3.1.6 update is sourced from AMD SDK 2.4.0 (`7539ae8`). The retained
+Godot host-ABI and shader adaptation boundaries are documented in
+`thirdparty/amd-ffx/GODOT_PORT.md`. The external Vulkan adapter uses SDK 2.4
+headers and device-aware provider enumeration; actual AMD FSR4 execution is
+not claimed by the synthetic provider tests.
