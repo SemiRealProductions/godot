@@ -126,6 +126,20 @@ such as "Fixes #1234". This will cause the issue to be closed automatically if
 the PR is merged. Adding it to the commit message is easier, but adds a lot of
 unnecessary updates in the issue distracting from the thread.
 
+For this fork, when importing a change from an upstream PR, add a
+`Related upstream PR: <owner>/<repository>#<PR number>` line at the end of the
+commit description. If the change was cherry-picked, place the original commit
+ID immediately underneath it, using the `(cherry picked from commit <ID>)`
+format. For example:
+
+```text
+Related upstream PR: godotengine/godot#122742
+(cherry picked from commit 7cc8131)
+```
+
+Use the original source commit ID, not the new commit ID created in this fork.
+`git cherry-pick -x` adds the cherry-pick reference automatically.
+
 Here's an example of a well-formatted commit message (note how the extended
 description is also manually wrapped at 80 chars for readability):
 
