@@ -628,6 +628,10 @@ void light_process_omni(uint idx, vec3 vertex, hvec3 eye_vec, hvec3 normal, vec3
 	}
 #endif
 
+#if defined(HAS_RAYTRACED_SHADOW_MASKS) && !defined(SHADOWS_DISABLED)
+	shadow = half(raytraced_shadow_visibility(omni_lights.data[idx].position, 1, vertex, screen_uv, float(shadow), omni_lights.data[idx].shadow_opacity));
+#endif
+
 	vec3 color = omni_lights.data[idx].color;
 
 #ifdef LIGHT_TRANSMITTANCE_USED
@@ -881,6 +885,10 @@ void light_process_spot(uint idx, vec3 vertex, hvec3 eye_vec, hvec3 normal, vec3
 		}
 	}
 #endif // SHADOWS_DISABLED
+
+#if defined(HAS_RAYTRACED_SHADOW_MASKS) && !defined(SHADOWS_DISABLED)
+	shadow = half(raytraced_shadow_visibility(spot_lights.data[idx].position, 2, vertex, screen_uv, float(shadow), spot_lights.data[idx].shadow_opacity));
+#endif
 
 	vec3 color = spot_lights.data[idx].color;
 

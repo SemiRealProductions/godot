@@ -479,6 +479,8 @@ layout(set = 1, binding = 32, std140) uniform VoxelGIs {
 voxel_gi_instances;
 
 layout(set = 1, binding = 33) uniform texture3D volumetric_fog_texture;
+// Optional pre-opaque per-light ray visibility, supplied by a compositor.
+layout(set = 1, binding = 39) uniform texture2DArray raytraced_shadow_masks;
 
 #ifdef USE_MULTIVIEW
 layout(set = 1, binding = 34) uniform texture2DArray ssil_buffer;

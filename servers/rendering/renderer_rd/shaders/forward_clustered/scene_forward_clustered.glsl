@@ -1047,6 +1047,33 @@ layout(location = 2) out vec2 motion_vector;
 #endif
 
 #include "../scene_forward_gi_inc.glsl"
+// A missing/invalid mask always preserves native shadow maps. The final row
+// stores exact view-space light keys; G stores receiver depth, preventing opaque
+// screen masks from shadowing transparent surfaces at a different depth.
+#define HAS_RAYTRACED_SHADOW_MASKS
+float raytraced_shadow_visibility(vec3 light_key, int light_kind, vec3 receiver, vec2 uv, float native_shadow, float shadow_opacity) {
+	ivec3 dimensions = textureSize(sampler2DArray(raytraced_shadow_masks, SAMPLER_LINEAR_CLAMP), 0);
+	if (dimensions.y < 2) return native_shadow;
+	int height = dimensions.y - 1;
+	for (int layer = 0; layer < min(dimensions.z, 4); layer++) {
+		vec3 key = vec3(
+			texelFetch(sampler2DArray(raytraced_shadow_masks, SAMPLER_LINEAR_CLAMP), ivec3(0, height, layer), 0).r,
+			texelFetch(sampler2DArray(raytraced_shadow_masks, SAMPLER_LINEAR_CLAMP), ivec3(1, height, layer), 0).r,
+			texelFetch(sampler2DArray(raytraced_shadow_masks, SAMPLER_LINEAR_CLAMP), ivec3(2, height, layer), 0).r);
+		int kind = int(texelFetch(sampler2DArray(raytraced_shadow_masks, SAMPLER_LINEAR_CLAMP), ivec3(3, height, layer), 0).r);
+		if (kind != light_kind || distance(key, light_key) > 0.005) continue;
+		ivec2 pixel = clamp(ivec2(uv * vec2(dimensions.x, height)), ivec2(0), ivec2(dimensions.x - 1, height - 1));
+		vec2 visibility_depth = texelFetch(sampler2DArray(raytraced_shadow_masks, SAMPLER_LINEAR_CLAMP), ivec3(pixel, layer), 0).rg;
+		float tolerance = max(0.015, abs(receiver.z) * 0.0002);
+		if (abs(visibility_depth.y + receiver.z) <= tolerance) {
+			float visibility = mix(1.0, visibility_depth.x, shadow_opacity);
+			bool keep_native_casters = texelFetch(sampler2DArray(raytraced_shadow_masks, SAMPLER_LINEAR_CLAMP), ivec3(4, height, layer), 0).r > 0.5;
+			return keep_native_casters ? min(native_shadow, visibility) : visibility;
+		}
+	}
+	return native_shadow;
+}
+
 #include "../scene_forward_lights_inc.glsl"
 
 #endif //!defined(MODE_RENDER_DEPTH) && !defined(MODE_UNSHADED)
@@ -2733,6 +2760,7 @@ void fragment_shader(in SceneData scene_data) {
 				shadow = float(shadow1 >> ((i - 4u) * 8u) & 0xFFu) / 255.0;
 			}
 
+			shadow = raytraced_shadow_visibility(directional_lights.data[i].direction, 0, vertex, screen_uv, shadow, 1.0);
 			shadow = mix(1.0, shadow, directional_lights.data[i].shadow_opacity);
 #endif
 

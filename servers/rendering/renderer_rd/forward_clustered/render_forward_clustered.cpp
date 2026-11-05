@@ -3891,6 +3891,14 @@ RID RenderForwardClustered::_setup_render_pass_uniform_set(RenderListType p_rend
 		u.append_id(texture);
 		uniforms.push_back(u);
 	}
+	{
+		RD::Uniform u;
+		u.binding = 39;
+		u.uniform_type = RD::UNIFORM_TYPE_TEXTURE;
+		RID masks = rb.is_valid() && !is_multiview && rb->has_texture("raytraced_shadows", "visibility") ? rb->get_texture("raytraced_shadows", "visibility") : RID();
+		u.append_id(masks.is_valid() ? masks : texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_2D_ARRAY_WHITE));
+		uniforms.push_back(u);
+	}
 #ifdef MODULE_TEXTURE_STREAMING_ENABLED
 	{
 		RD::Uniform u;
@@ -5249,6 +5257,8 @@ void RenderForwardClustered::_update_shader_quality_settings() {
 
 RenderForwardClustered::RenderForwardClustered() {
 	singleton = this;
+	// Capability contract for the optional project-authored shadow compositor.
+	GLOBAL_DEF("rendering/lights_and_shadows/raytraced_shadow_masks", true);
 
 	/* SCENE SHADER */
 
