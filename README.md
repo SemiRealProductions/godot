@@ -124,6 +124,7 @@ The full automated build/publish pipeline is separate work.
   extension ports its FidelityFX host/backend integration and shader wrappers
   from private engine classes to public GDExtension RenderingDevice calls.
   Its engine-integrated FSR implementation is not merged into the engine here.
+  Ref: godotengine/godot#111631
 - **Bastiaan Olij — custom-upscaler example:**
   https://codeberg.org/BastiaanOlij/test-custom-upscaler
   Reference revision `9d89b245dd4be30eda80622efb8389888391f8d7`. Used to understand
