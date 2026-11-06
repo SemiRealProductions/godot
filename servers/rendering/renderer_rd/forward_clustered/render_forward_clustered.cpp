@@ -1389,6 +1389,8 @@ void RenderForwardClustered::_update_volumetric_fog(Ref<RenderSceneBuffersRD> p_
 
 		RendererRD::Fog::VolumetricFogSettings settings;
 		settings.rb_size = size;
+		settings.ray_visibility = p_render_buffers->has_texture("raytraced_volumetrics", "visibility") ? p_render_buffers->get_texture("raytraced_volumetrics", "visibility") : RID();
+		settings.ray_light_keys = p_render_buffers->has_texture("raytraced_volumetrics", "lights") ? p_render_buffers->get_texture("raytraced_volumetrics", "lights") : RID();
 		settings.time = time;
 		settings.is_using_radiance_octmap_array = is_using_radiance_octmap_array();
 		settings.max_cluster_elements = RendererRD::LightStorage::get_singleton()->get_max_cluster_elements();
@@ -5259,6 +5261,7 @@ RenderForwardClustered::RenderForwardClustered() {
 	singleton = this;
 	// Capability contract for the optional project-authored shadow compositor.
 	GLOBAL_DEF("rendering/lights_and_shadows/raytraced_shadow_masks", true);
+	GLOBAL_DEF("rendering/lights_and_shadows/raytraced_volumetric_masks", true);
 
 	/* SCENE SHADER */
 

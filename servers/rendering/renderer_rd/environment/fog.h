@@ -312,6 +312,8 @@ public:
 
 		RID light_density_map;
 		RID prev_light_density_map;
+		RID ray_visibility;
+		RID ray_light_keys;
 		RID fog_map;
 		RID density_map;
 		RID light_map;
@@ -352,6 +354,8 @@ public:
 		bool is_using_radiance_octmap_array;
 		uint32_t max_cluster_elements;
 		bool volumetric_fog_filter_active;
+		RID ray_visibility;
+		RID ray_light_keys;
 		RID shadow_sampler;
 		RID voxel_gi_buffer;
 		RID shadow_atlas_depth;

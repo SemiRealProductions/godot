@@ -220,6 +220,33 @@ layout(set = 0, binding = 20) uniform texture2D sky_texture;
 #endif // MODE_COPY
 
 layout(set = 0, binding = 21) uniform texture2D area_light_atlas;
+#ifndef MODE_COPY
+layout(set = 0, binding = 22) uniform texture3D ray_visibility_grid;
+layout(set = 0, binding = 23) uniform texture2D ray_light_keys;
+#endif
+#ifdef MODE_DENSITY
+// Match native cluster lights by view-space direction/position, never array
+// index. Non-selected lights and missing/obsolete grids retain native shadows.
+float ray_fog_visibility(vec3 light_key, int kind, vec3 fog_pos, float native_visibility, float opacity) {
+	if (textureSize(sampler2D(ray_light_keys, linear_sampler), 0).x < 4) {
+		return native_visibility;
+	}
+	vec4 header = texelFetch(sampler2D(ray_light_keys, linear_sampler), ivec2(0, 1), 0);
+	if (header.w < 0.5 || abs(header.x - params.fog_frustum_end) > 0.01 || abs(header.y - params.detail_spread) > 0.001) {
+		return native_visibility;
+	}
+	vec3 uvw = vec3(fog_pos.xy, pow(fog_pos.z, 1.0 / params.detail_spread));
+	for (int slot = 0; slot < 4; slot++) {
+		vec4 key = texelFetch(sampler2D(ray_light_keys, linear_sampler), ivec2(slot, 0), 0);
+		if (int(round(key.w)) == kind && distance(key.xyz, light_key) < 0.005) {
+			float traced = mix(1.0, textureLod(sampler3D(ray_visibility_grid, linear_sampler), uvw, 0.0)[slot], opacity);
+			return header.z > 0.5 ? min(native_visibility, traced) : traced;
+		}
+	}
+	return native_visibility;
+}
+#endif
+
 
 float get_depth_at_pos(float cell_depth_size, int z) {
 	float d = float(z) * cell_depth_size + cell_depth_size * 0.5; //center of voxels
@@ -436,6 +463,7 @@ void main() {
 					shadow_attenuation = mix(vec3(1.0 - directional_lights.data[i].shadow_opacity), vec3(1.0), shadow);
 				}
 
+				shadow_attenuation = vec3(ray_fog_visibility(directional_lights.data[i].direction, 0, fog_unit_pos, shadow_attenuation.r, directional_lights.data[i].shadow_opacity));
 				total_light += shadow_attenuation * directional_lights.data[i].color * directional_lights.data[i].energy * henyey_greenstein(dot(safe_normalize(view_pos), safe_normalize(directional_lights.data[i].direction)), params.phase_g) * directional_lights.data[i].volumetric_fog_energy;
 			}
 		}
@@ -522,6 +550,7 @@ void main() {
 
 							shadow_attenuation = mix(1.0 - omni_lights.data[light_index].shadow_opacity, 1.0, exp(min(0.0, (pos.z - depth)) / omni_lights.data[light_index].inv_radius * INV_FOG_FADE));
 						}
+						shadow_attenuation = ray_fog_visibility(omni_lights.data[light_index].position, 1, fog_unit_pos, shadow_attenuation, omni_lights.data[light_index].shadow_opacity);
 						total_light += light * attenuation * shadow_attenuation * henyey_greenstein(dot(safe_normalize(light_pos - view_pos), safe_normalize(view_pos)), params.phase_g) * omni_lights.data[light_index].volumetric_fog_energy;
 					}
 				}
@@ -587,6 +616,7 @@ void main() {
 
 							shadow_attenuation = mix(1.0 - spot_lights.data[light_index].shadow_opacity, 1.0, exp(min(0.0, (pos.z - depth)) / spot_lights.data[light_index].inv_radius * INV_FOG_FADE));
 						}
+						shadow_attenuation = ray_fog_visibility(spot_lights.data[light_index].position, 2, fog_unit_pos, shadow_attenuation, spot_lights.data[light_index].shadow_opacity);
 						total_light += light * attenuation * shadow_attenuation * henyey_greenstein(dot(safe_normalize(light_rel_vec), safe_normalize(view_pos)), params.phase_g) * spot_lights.data[light_index].volumetric_fog_energy;
 					}
 				}

@@ -573,6 +573,15 @@ void Fog::volumetric_fog_update(const VolumetricFogSettings &p_settings, const P
 	RD::get_singleton()->draw_command_begin_label("Volumetric Fog");
 
 	Ref<VolumetricFog> fog = p_settings.vfog;
+	// Compositor-owned textures can disappear on disable/resize. Rebind without
+	// retaining an invalid visibility grid or reprojecting the previous mode.
+	const bool ray_visibility_changed = fog->ray_visibility != p_settings.ray_visibility || fog->ray_light_keys != p_settings.ray_light_keys;
+	if (ray_visibility_changed) {
+		fog->sync_gi_dependent_sets_validity(true);
+		fog->ray_visibility = p_settings.ray_visibility;
+		fog->ray_light_keys = p_settings.ray_light_keys;
+	}
+
 
 	if (p_fog_volumes.size() > 0) {
 		RD::get_singleton()->draw_command_begin_label("Render Volumetric Fog Volumes");
@@ -610,7 +619,7 @@ void Fog::volumetric_fog_update(const VolumetricFogSettings &p_settings, const P
 		params.fog_volume_size[1] = fog->height;
 		params.fog_volume_size[2] = fog->depth;
 
-		params.use_temporal_reprojection = RendererSceneRenderRD::get_singleton()->environment_get_volumetric_fog_temporal_reprojection(p_settings.env);
+		params.use_temporal_reprojection = !ray_visibility_changed && RendererSceneRenderRD::get_singleton()->environment_get_volumetric_fog_temporal_reprojection(p_settings.env);
 		params.temporal_frame = RSG::rasterizer->get_frame_number() % VolumetricFog::MAX_TEMPORAL_FRAMES;
 		params.detail_spread = RendererSceneRenderRD::get_singleton()->environment_get_volumetric_fog_detail_spread(p_settings.env);
 		params.temporal_blend = RendererSceneRenderRD::get_singleton()->environment_get_volumetric_fog_temporal_reprojection_amount(p_settings.env);
@@ -1006,6 +1015,22 @@ void Fog::volumetric_fog_update(const VolumetricFogSettings &p_settings, const P
 			copy_uniforms.push_back(u);
 		}
 
+		// Append bindings so the density/fog ping-pong indices above stay stable.
+		{
+			RD::Uniform u;
+			u.uniform_type = RD::UNIFORM_TYPE_TEXTURE;
+			u.binding = 22;
+			u.append_id(p_settings.ray_visibility.is_valid() ? p_settings.ray_visibility : texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_3D_WHITE));
+			uniforms.push_back(u);
+		}
+		{
+			RD::Uniform u;
+			u.uniform_type = RD::UNIFORM_TYPE_TEXTURE;
+			u.binding = 23;
+			u.append_id(p_settings.ray_light_keys.is_valid() ? p_settings.ray_light_keys : texture_storage->texture_rd_get_default(RendererRD::TextureStorage::DEFAULT_RD_TEXTURE_BLACK));
+			uniforms.push_back(u);
+		}
+
 		if (fog->copy_uniform_set.is_valid() && RD::get_singleton()->uniform_set_is_valid(fog->copy_uniform_set)) {
 			RD::get_singleton()->free_rid(fog->copy_uniform_set);
 		}
@@ -1138,7 +1163,7 @@ void Fog::volumetric_fog_update(const VolumetricFogSettings &p_settings, const P
 	Transform3D to_prev_cam_view = p_prev_cam_inv_transform * p_cam_transform;
 	RendererRD::MaterialStorage::store_transform(to_prev_cam_view, params.to_prev_view);
 
-	params.use_temporal_reprojection = RendererSceneRenderRD::get_singleton()->environment_get_volumetric_fog_temporal_reprojection(p_settings.env);
+	params.use_temporal_reprojection = !ray_visibility_changed && RendererSceneRenderRD::get_singleton()->environment_get_volumetric_fog_temporal_reprojection(p_settings.env);
 	params.temporal_blend = RendererSceneRenderRD::get_singleton()->environment_get_volumetric_fog_temporal_reprojection_amount(p_settings.env);
 
 	RID sky_rid = RendererSceneRenderRD::get_singleton()->environment_get_sky(p_settings.env);
