@@ -1,8 +1,12 @@
 # Godot Engine
 
-This fork's `fsr3-builtin` branch includes the built-in FSR 3.1.6 upscaler module.
-Project-specific build, runtime, release and validation details are documented
-below and in [modules/fsr3/README.md](modules/fsr3/README.md).
+This fork includes the built-in FSR 3.1.6 upscaler module.
+
+The current development branch is `semi-real-engine`. This custom fork is based
+on Godot 4.8 beta, with upstream Godot master merged through `960f4db5be`.
+It includes rendering, editor, audio and core fixes alongside the upscaler.
+Build, runtime and validation details are documented below and in
+[modules/fsr3/README.md](modules/fsr3/README.md).
 
 Additional upstream imports and validation limits are recorded in
 [misc/custom_engine/UPSTREAM_IMPORTS_2026_11_13.md](misc/custom_engine/UPSTREAM_IMPORTS_2026_11_13.md).
@@ -43,7 +47,12 @@ engine, used to publish several work-for-hire titles.
 
 ### Binary downloads
 
-Official binaries for the Godot editor and the export templates can be found
+Custom editors and matching export templates for this fork are available from
+[GitHub Releases](https://github.com/SemiRealProductions/godot/releases).
+See the release notes for the exact source revision, included platforms and
+validation limits. Local test builds are separate from published releases.
+
+Official upstream Godot binaries remain available
 [on the Godot website](https://godotengine.org/download).
 
 ### Compiling from source
@@ -82,10 +91,9 @@ for more information.
 [![Code Triagers Badge](https://www.codetriage.com/godotengine/godot/badges/users.svg)](https://www.codetriage.com/godotengine/godot)
 [![Translate on Weblate](https://hosted.weblate.org/widgets/godot-engine/-/godot/svg-badge.svg)](https://hosted.weblate.org/engage/godot-engine/?utm_source=widget)
 
-# Built-in FSR3 custom editor
+# Semi-Real Engine custom editor
 
-Branch `fsr3-builtin` is based on upstream Godot master `d40e9472f6`. The built-in
-FSR 3.1.6 source upscaler is compiled into `modules/fsr3/` and is available
+The built-in FSR 3.1.6 source upscaler is compiled into `modules/fsr3/` and is available
 through ordinary project and viewport settings.
 No per-project addon or autoload is required. The module is included in matching
 editor and export-template builds on Linux and Windows with 3D support.
@@ -111,7 +119,58 @@ The former companion under `misc/fsr3-gdextension` retains historical extension
 sources for reference; current native backend development belongs in the module.
 Its demo now uses built-in FSR3 and has no addons directory. Updated packaging
 ships built-in editors and the standalone demo without extension libraries.
-The full automated build/publish pipeline is separate work.
+Builds, tests and packaging can be run locally; publishing is a separate,
+explicitly requested step. There is no claim of an automatic CI release pipeline.
+
+## Other changes in the current branch
+
+- Optional compositor-supplied visibility masks feed Forward+ light shading and
+  volumetric fog. The project supplies the visibility textures; native-shadow
+  fallback remains available.
+- CSG avoids duplicate deferred shape updates. Box-projected reflection probes
+  include contact hardening and view-dependent roughness adjustments.
+- Imported scene nodes receive deterministic IDs, preserving importer-supplied
+  IDs and avoiding collisions with those reserved IDs.
+- The script method outline supports nested code regions, filtering and fold-state
+  restoration. Typed-array and dictionary casts validate container type metadata;
+  see the [casting compatibility notes](misc/custom_engine/TYPED_CONTAINER_CAST_REVIEW.md).
+- Audio effect/bypass changes use a short crossfade, and audio playbacks are
+  cleaned up at shutdown. Custom export templates take precedence during export
+  validation without spurious missing-stock-template warnings.
+- ClassDB default discovery preserves explicit defaults without holding its lock
+  during object construction or property access.
+
+The [upstream import record](misc/custom_engine/UPSTREAM_IMPORTS_2026_11_13.md)
+and commit history document sources, adaptations and test limits. A focused test
+pass is not a substitute for testing an entire game and its dependencies.
+
+## Release Stack
+
+A **Release Stack** means the complete set below, built from one committed source
+revision. Both debug and release export runtimes are included for each platform.
+
+| Asset | Contents |
+| --- | --- |
+| Linux editor ZIP | Linux x86_64 editor; X11 and Wayland in one binary, glibc 2.35+. |
+| Windows editor ZIP | Windows x86_64 editor and console helper; optional AMD Vulkan runtime DLLs and licence. |
+| Linux export templates ZIP | Matching Linux debug and release runtimes. |
+| Windows export templates ZIP | Matching Windows debug/release runtimes and console helpers. |
+| `FSR3-Temporal-Artifact-Lab.zip` | Standalone demo using the built-in upscaler, with no FSR addon. |
+| Source ZIP and `.tar.gz` | Committed engine source with the pinned historical godot-cpp sources expanded. |
+| `SHA256SUMS.txt` | SHA-256 checksums for the seven archives. |
+
+Current custom Windows builds use Vulkan with D3D12 disabled. Linux and Windows
+runtime validation are reported separately; Wine testing does not establish
+native Windows validation. These Godot 4.8 beta builds remain experimental.
+
+Extract the template ZIPs to a permanent location and select their debug/release
+binaries under **Custom Template** in the matching editor's export presets.
+They are per-platform custom-template ZIPs, not an all-platform TPZ installer.
+Older templates do not gain new runtime fixes when only the editor is updated.
+
+A local test build may contain only an editor. It is kept local unless publication
+is explicitly requested. Building a Release Stack and publishing it are distinct
+actions.
 
 ## Sources and credits
 
@@ -165,9 +224,9 @@ The managed resource is excluded from the serialized custom-resource property.
 External Vulkan contexts and loaded libraries remain retained until GPU completion.
 ViewportUpscaler property types and jitter forwarding are corrected for native use.
 
-Existing template-source checkouts and published releases are from the extension
-branch and are not updated by changing this source branch. Rebuild export templates
-from this branch before exporting a project using the built-in classes.
+Use editors and export templates from the same Release Stack. Updating the source
+branch does not update existing binaries, older template-source checkouts or
+previously published archives.
 
 The analytical source was updated to FSR 3.1.6 from AMD SDK 2.4.0, revision
 `7539ae8b6568ad29ed78a753404351daf3b5cca7`, while retaining the original Godot
@@ -187,5 +246,5 @@ RenderingDevice adaptation. See `thirdparty/amd-ffx/GODOT_PORT.md`.
 
 The original HydrogenC port was based on FidelityFX SDK 1.1.4; the current
 FSR 3.1.6 source update and optional runtime packaging use SDK 2.4.0. The 1.1.4
-reference below is historical provenance, not the SDK version pinned by this
-fork.
+reference in the credits is historical provenance, not the SDK version pinned
+by this fork.
