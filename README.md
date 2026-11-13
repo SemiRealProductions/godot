@@ -4,6 +4,9 @@ This fork's `fsr3-builtin` branch includes the built-in FSR 3.1.6 upscaler modul
 Project-specific build, runtime, release and validation details are documented
 below and in [modules/fsr3/README.md](modules/fsr3/README.md).
 
+Additional upstream imports and validation limits are recorded in
+[misc/custom_engine/UPSTREAM_IMPORTS_2026_11_13.md](misc/custom_engine/UPSTREAM_IMPORTS_2026_11_13.md).
+
 <p align="center">
   <a href="https://godotengine.org">
     <img src="misc/logo/logo_outlined.svg" width="400" alt="Godot Engine logo">
