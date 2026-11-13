@@ -4,18 +4,19 @@ Reviewed 13 November 2026 against `semi-real-engine` and upstream
 [Godot PR #124662](https://github.com/godotengine/godot/pull/124662), revision
 `d699842a191c76652875a8c434bd6189ce1989e2`.
 
-**Status: assessed only; not imported.** The other four requested imports do not
-change GDScript container casting.
+**Status: imported on 14 November 2026 at the user's request.** The original
+compatibility review below remains the checklist for future validation. The other
+four imports do not change GDScript container casting.
 
 ## Behaviour and secondary effects
 
-The proposal adds typed-array and typed-dictionary cast opcodes and stricter
+The import adds typed-array and typed-dictionary cast opcodes and stricter
 analyser checks. The VM checks the container's declared type metadata, including
 native/script element types. It does not inspect an untyped array's contents and
 turn them into a typed container. Relevant changes are in the analyser, bytecode
 generator, VM, disassembler and warnings, with analyser/runtime regression cases.
 
-| Code / situation | Effect if the PR is adopted |
+| Code / situation | Effect with the imported PR |
 | --- | --- |
 | `var a = [1]; a as Array[String]` | Invalid cast is caught instead of allowing later invalid element operations. A statically known mismatch can be an analyser error; a dynamically typed mismatch fails at runtime. |
 | An untyped `Array` containing only strings, cast with `as Array[String]` | Matching contents alone are insufficient. The runtime requires matching container type metadata; the cast does not convert the array. |
@@ -68,11 +69,26 @@ It also overlaps the GDScript analyser/parser/VM and could conflict with later
 language improvements, including independently reviewed typed-container
 optimisations. Those should be evaluated separately rather than stacked blindly.
 
-## Recommendation
+## Adoption and validation status
 
-The known source-level exposure in our current game is low, and catching invalid
-casts is useful. Nevertheless, keep this as a separate decision from the four
-requested imports. Before adoption, run the upstream analyser/runtime tests in
-both debug and release configurations, add valid/invalid untyped-container and
-subclass cases, parse the game and installed addons, and exercise networking,
-VOIP and resource-loading paths with matching export templates.
+Adopted separately on 14 November 2026, retaining upstream's original author,
+co-author and regression tests. The source import applied cleanly.
+
+- Eighteen focused C++ syntax checks passed: eight GDScript translation units
+  for Linux and Windows, plus the VM with debug/tools disabled on both platforms.
+- A source-derived harness executes the actual typed-array/dictionary VM handler
+  bodies against lightweight Variant/container adapters. All 46 cases pass in
+  each debug/release configuration (92 total), covering cast and assignment
+  success, invalid kinds, mismatched builtin/native/script types, untyped inputs,
+  destination preservation on failure and retained references on success.
+- The adapter harness is not the full GDScript compiler or engine. Sanitizer
+  checks could not run because this host lacks the ASan/UBSan runtime libraries.
+- The upstream analyser/runtime fixtures were imported, but have not been run in
+  a rebuilt editor. No editor/template binaries or releases were built here.
+
+When matching binaries are built, run the upstream analyser/runtime suites in
+addition to parsing the game and installed addons. Watch for `Invalid cast`,
+`unsafe_cast` warnings and failures in networking, VOIP and resource-loading
+paths. Recheck any new dependencies for typed-container casts. Use matching
+export templates so editor and exported-game behaviour agree. These are recorded
+follow-up checks, not an automatic monitoring service or a confirmed game bug.

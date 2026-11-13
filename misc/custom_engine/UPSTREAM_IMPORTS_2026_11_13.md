@@ -1,8 +1,8 @@
 # Upstream imports — 13 November 2026
 
 These source changes extend `semi-real-engine` from baseline `ee3506e801`.
-They do not update the installed editor or export templates and have not been
-pushed or released by this integration task.
+They do not update the installed editor or export templates. The four imports
+and their documentation were pushed on 14 November 2026; no release was made.
 
 | Change | Original author / upstream revision | Adaptation |
 | --- | --- | --- |
@@ -65,4 +65,10 @@ appearance and script-outline mouse/keyboard navigation.
 ## Separate proposal
 
 [#124662 — Typed container casts](https://github.com/godotengine/godot/pull/124662)
-was assessed but **not imported**. See the [compatibility review](TYPED_CONTAINER_CAST_REVIEW.md).
+was assessed on 13 November and **imported on 14 November 2026** at the user's
+request, from `d699842a191c76652875a8c434bd6189ce1989e2`. Original author
+HolonProduction and co-author Danil Alexeev are retained in the import commit.
+The upstream analyser/runtime regression fixtures are included. Focused Linux /
+Windows syntax checks and a debug/release VM-handler adapter harness passed;
+full rebuilt-engine suites and game runtime validation remain pending. See the
+[compatibility review and watch items](TYPED_CONTAINER_CAST_REVIEW.md).
