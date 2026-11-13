@@ -72,3 +72,25 @@ The upstream analyser/runtime regression fixtures are included. Focused Linux /
 Windows syntax checks and a debug/release VM-handler adapter harness passed;
 full rebuilt-engine suites and game runtime validation remain pending. See the
 [compatibility review and watch items](TYPED_CONTAINER_CAST_REVIEW.md).
+
+## Linux test-build follow-up — 14 November 2026
+
+Cold-start testing found three required-virtual getter errors during ClassDB
+property-default discovery. The upstream lock-scope change in
+[#124892](https://github.com/godotengine/godot/pull/124892) no longer skipped
+getters for explicitly registered defaults until after collecting new values.
+Copy those defaults under the initial read lock so discovery can skip their
+getters, while still performing object construction and property access outside
+the lock. This preserves the upstream deadlock fix.
+
+A focused runner at `tests/classdb_defaults/run.py` (relative to this directory)
+checks extension defaults, ordinary discovered defaults, repeat queries and the
+absence of engine error output. Run it with the editor executable as its argument:
+
+```bash
+python3 misc/custom_engine/tests/classdb_defaults/run.py /path/to/godot
+```
+
+The test reproduces the three errors in the initial Linux test binary. Linux and
+Windows syntax checks pass for the fix; rebuilt-binary validation is recorded in
+the test-release build logs rather than assumed from the source checks.
