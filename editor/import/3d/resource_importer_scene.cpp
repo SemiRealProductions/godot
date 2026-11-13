@@ -36,6 +36,7 @@
 #include "core/io/resource_saver.h"
 #include "core/object/class_db.h"
 #include "core/object/script_language.h"
+#include "core/templates/hash_set.h"
 #include "editor/editor_interface.h"
 #include "editor/editor_node.h"
 #include "editor/import/3d/scene_import_settings.h"
@@ -3509,6 +3510,46 @@ Error ResourceImporterScene::import(ResourceUID::ID p_source_id, const String &p
 
 	for (int i = 0; i < post_importer_plugins.size(); i++) {
 		post_importer_plugins.write[i]->post_process(scene, p_options);
+	}
+
+	// Generate deterministic unique node IDs, preserving IDs supplied by importers.
+	if (_scene_import_type == "PackedScene") {
+		HashSet<uint32_t> ids_saved;
+		LocalVector<Node *> nodes;
+		nodes.push_back(scene);
+
+		// Reserve every existing ID before assigning any new ones. A preserved ID
+		// may belong to a node visited later in the traversal.
+		for (uint32_t i = 0; i < nodes.size(); i++) {
+			Node *node = nodes[i];
+			for (Node *child : node->iterate_children()) {
+				nodes.push_back(child);
+			}
+			if (node->get_unique_scene_id() != Node::UNIQUE_SCENE_ID_UNASSIGNED) {
+				ids_saved.insert(node->get_unique_scene_id());
+			}
+		}
+
+		for (Node *node : nodes) {
+			if (node->get_unique_scene_id() != Node::UNIQUE_SCENE_ID_UNASSIGNED) {
+				continue;
+			}
+
+			uint32_t data = p_source_id ^ node->get_name().string().hash64();
+			uint32_t unique_scene_id;
+			while (true) {
+				unique_scene_id = data & 0x7FFFFFFF; // Keep positive.
+				if (unique_scene_id == Node::UNIQUE_SCENE_ID_UNASSIGNED) {
+					unique_scene_id = 1;
+				}
+				if (!ids_saved.has(unique_scene_id)) {
+					break;
+				}
+				data++;
+			}
+			node->set_unique_scene_id(unique_scene_id);
+			ids_saved.insert(unique_scene_id);
+		}
 	}
 
 	progress.step(TTR("Saving..."), 104);
