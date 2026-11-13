@@ -42,6 +42,7 @@
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
 #include "core/string/fuzzy_search.h"
+#include "core/templates/hash_set.h"
 #include "core/variant/dictionary.h"
 #include "core/version.h"
 #include "editor/debugger/editor_debugger_node.h"
@@ -664,7 +665,7 @@ void DocumentOutline::_notification(int p_what) {
 }
 
 void DocumentOutline::_tree_selected() {
-	if (updating_outline) {
+	if (updating_outline || !tree->get_selected()) {
 		return;
 	}
 	Control *active_editor = document_editor_container->get_active_editor();
@@ -697,99 +698,181 @@ void DocumentOutline::update_outline() {
 	if (current_editor != active_editor) {
 		selected = ""; // Script/doc changed, forget the last selection.
 	}
-	current_editor = active_editor;
 
+	if (current_editor != active_editor) {
+		collapsed_groups.clear();
+	} else if (!filter_active && tree->get_root()) {
+		collapsed_groups.clear();
+		LocalVector<TreeItem *> items;
+		items.push_back(tree->get_root());
+		for (uint32_t i = 0; i < items.size(); i++) {
+			TreeItem *item = items[i];
+			if (item->is_collapsed() && item->has_meta("outline_group")) {
+				collapsed_groups.insert(item->get_meta("outline_group"));
+			}
+			for (TreeItem *child = item->get_first_child(); child; child = child->get_next()) {
+				items.push_back(child);
+			}
+		}
+	}
+
+	current_editor = active_editor;
+	filter_active = !filter->get_text().is_empty();
 	updating_outline = true;
 
 	tree->clear();
 	tree->create_item();
 
 	if (CodeEditorBase *ceb = Object::cast_to<CodeEditorBase>(active_editor)) {
+		const bool sort_alphabetically = EDITOR_GET("text_editor/script_list/sort_members_outline_alphabetically");
 		PackedStringArray functions = ceb->get_functions();
-		if (EDITOR_GET("text_editor/script_list/sort_members_outline_alphabetically")) {
+		if (sort_alphabetically) {
 			functions.sort();
 		}
 
 		const String &filter_text = filter->get_text();
-		HashMap<String, TreeItem *> parents;
-		Color disabled_color = get_theme_color(SNAME("font_disabled_color"), EditorStringName(Editor));
-
+		PackedStringArray filtered_functions;
 		if (filter_text.is_empty()) {
-			for (const String &function_name : functions) {
-				TreeItem *parent = tree->get_root();
-				String name = function_name.get_slicec(':', 0);
-
-				// Organize functions inside subclasses.
-				Vector<String> subclasses = name.split(".");
-				if (!subclasses.is_empty()) {
-					int last = subclasses.size() - 1;
-					name = subclasses[last];
-					subclasses.remove_at(last); // Remove the function itself.
-
-					for (const String &subclass : subclasses) {
-						if (parents.has(subclass)) {
-							parent = parents[subclass];
-						} else {
-							parent = tree->create_item(parent);
-							parent->set_text(0, subclass);
-							parent->set_selectable(0, false);
-							parent->set_custom_color(0, disabled_color);
-							parents[subclass] = parent;
-						}
-					}
-				}
-
-				TreeItem *ti = tree->create_item(parent);
-				ti->set_text(0, name);
-				int line = function_name.get_slicec(':', 1).to_int() - 1;
-				ti->set_metadata(0, line);
-				ti->set_meta("function", function_name);
-				if (selected == function_name) {
-					ti->select(0);
-				}
-			}
+			filtered_functions = functions;
 		} else {
 			PackedStringArray search_names;
 			for (const String &function_name : functions) {
 				search_names.append(function_name.get_slicec(':', 0));
 			}
-
 			FuzzySearch fuzzy;
 			fuzzy.set_case_sensitive(false);
-			Vector<Ref<FuzzySearchMatch>> results = fuzzy.search_all(filter_text, search_names);
+			for (const Ref<FuzzySearchMatch> &result : fuzzy.search_all(filter_text, search_names)) {
+				filtered_functions.append(functions[result->get_original_index()]);
+			}
+		}
 
-			for (const Ref<FuzzySearchMatch> &res : results) {
-				TreeItem *parent = tree->get_root();
-				String function_name = functions[res->get_original_index()];
-				String name = function_name.get_slicec(':', 0);
+		struct CodeRegion {
+			int start_line = 0;
+			int end_line = 0;
+			int parent = -1;
+			String name;
+			TreeItem *item = nullptr;
+		};
+		Vector<CodeRegion> regions;
+		Vector<int> region_stack;
+		CodeEdit *code_edit = ceb->get_code_editor()->get_text_editor();
+		for (int line = 0; line < code_edit->get_line_count(); line++) {
+			if (code_edit->is_line_code_region_start(line)) {
+				CodeRegion region;
+				region.start_line = line;
+				// An unfinished region remains useful while the user is typing.
+				region.end_line = code_edit->get_line_count() - 1;
+				region.parent = region_stack.is_empty() ? -1 : region_stack[region_stack.size() - 1];
+				Vector<String> parts = code_edit->get_line(line).strip_edges().split_spaces(1);
+				region.name = parts.size() > 1 ? parts[1] : TTR("Region");
+				region_stack.push_back(regions.size());
+				regions.push_back(region);
+			} else if (code_edit->is_line_code_region_end(line) && !region_stack.is_empty()) {
+				regions.write[region_stack[region_stack.size() - 1]].end_line = line;
+				region_stack.resize(region_stack.size() - 1);
+			}
+		}
 
-				// Organize functions inside subclasses.
-				Vector<String> subclasses = name.split(".");
-				if (!subclasses.is_empty()) {
-					int last = subclasses.size() - 1;
-					name = subclasses[last];
-					subclasses.remove_at(last); // Remove the function itself.
-
-					for (const String &subclass : subclasses) {
-						if (parents.has(subclass)) {
-							parent = parents[subclass];
-						} else {
-							parent = tree->create_item(parent);
-							parent->set_text(0, subclass);
-							parent->set_selectable(0, false);
-							parent->set_custom_color(0, disabled_color);
-							parents[subclass] = parent;
-						}
+		LocalVector<TreeItem *> groups;
+		groups.push_back(tree->get_root());
+		for (int i = 0; i < regions.size(); i++) {
+			CodeRegion &region = regions.write[i];
+			bool show_region = filter_text.is_empty();
+			if (!show_region) {
+				for (const String &function_name : filtered_functions) {
+					int line = function_name.get_slicec(':', 1).to_int() - 1;
+					if (line > region.start_line && line <= region.end_line) {
+						show_region = true;
+						break;
 					}
 				}
+			}
+			if (!show_region) {
+				continue;
+			}
+			TreeItem *parent = region.parent < 0 ? tree->get_root() : regions[region.parent].item;
+			region.item = tree->create_item(parent);
+			region.item->set_text(0, region.name);
+			region.item->set_metadata(0, region.start_line);
+			String key = "region:" + itos(region.start_line);
+			region.item->set_meta("function", key);
+			region.item->set_meta("outline_group", key);
+			region.item->set_collapsed(filter_text.is_empty() && collapsed_groups.has(key));
+			if (selected == key) {
+				region.item->select(0);
+			}
+			groups.push_back(region.item);
+		}
 
-				TreeItem *ti = tree->create_item(parent);
-				ti->set_text(0, name);
-				int line = function_name.get_slicec(':', 1).to_int() - 1;
-				ti->set_metadata(0, line);
-				ti->set_meta("function", function_name);
-				if (selected == function_name) {
-					ti->select(0);
+		HashMap<String, TreeItem *> parents;
+		Color disabled_color = get_theme_color(SNAME("font_disabled_color"), EditorStringName(Editor));
+		for (const String &function_name : filtered_functions) {
+			int line = function_name.get_slicec(':', 1).to_int() - 1;
+			TreeItem *parent = tree->get_root();
+			String scope;
+			// Regions are in source order, so the last containing one is innermost.
+			for (const CodeRegion &region : regions) {
+				if (region.item && line > region.start_line && line <= region.end_line) {
+					parent = region.item;
+					scope = "region:" + itos(region.start_line);
+				}
+			}
+
+			Vector<String> subclasses = function_name.get_slicec(':', 0).split(".");
+			String name = subclasses[subclasses.size() - 1];
+			subclasses.resize(subclasses.size() - 1);
+			for (const String &subclass : subclasses) {
+				// Use the full scope: two nested classes may share a short name.
+				scope += "." + subclass;
+				if (parents.has(scope)) {
+					parent = parents[scope];
+					parent->set_metadata(0, MIN(int(parent->get_metadata(0)), line));
+				} else {
+					parent = tree->create_item(parent);
+					parent->set_text(0, subclass);
+					parent->set_metadata(0, line);
+					parent->set_selectable(0, false);
+					parent->set_custom_color(0, disabled_color);
+					parent->set_meta("outline_group", scope);
+					parent->set_collapsed(filter_text.is_empty() && collapsed_groups.has(scope));
+					parents[scope] = parent;
+					groups.push_back(parent);
+				}
+			}
+			TreeItem *item = tree->create_item(parent);
+			item->set_text(0, name);
+			item->set_metadata(0, line);
+			item->set_meta("function", function_name);
+			if (selected == function_name) {
+				item->select(0);
+			}
+		}
+
+		struct SourceOrder {
+			bool operator()(TreeItem *p_a, TreeItem *p_b) const {
+				return int(p_a->get_metadata(0)) < int(p_b->get_metadata(0));
+			}
+		};
+		struct AlphabeticalOrder {
+			bool operator()(TreeItem *p_a, TreeItem *p_b) const {
+				return p_a->get_text(0).naturalnocasecmp_to(p_b->get_text(0)) < 0;
+			}
+		};
+		// Fuzzy search keeps its result order; otherwise sort siblings together,
+		// including regions, instead of putting all regions before all methods.
+		if (filter_text.is_empty()) {
+			for (TreeItem *group : groups) {
+				Vector<TreeItem *> children;
+				for (TreeItem *child = group->get_first_child(); child; child = child->get_next()) {
+					children.push_back(child);
+				}
+				if (sort_alphabetically) {
+					children.sort_custom<AlphabeticalOrder>();
+				} else {
+					children.sort_custom<SourceOrder>();
+				}
+				for (int i = 1; i < children.size(); i++) {
+					children[i]->move_after(children[i - 1]);
 				}
 			}
 		}
@@ -860,7 +943,7 @@ DocumentOutline::DocumentOutline(DocumentEditorContainer *p_document_editor_cont
 	tree->set_allow_reselect(true);
 	tree->set_allow_rmb_select(true);
 	tree->set_hide_root(true);
-	tree->set_hide_folding(true);
+	tree->set_hide_folding(false);
 	tree->set_custom_minimum_size(Size2(0, 40 * EDSCALE));
 	tree->set_v_size_flags(SIZE_EXPAND_FILL);
 	tree->connect(SceneStringName(item_selected), callable_mp(this, &DocumentOutline::_tree_selected));

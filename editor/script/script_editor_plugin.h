@@ -33,6 +33,7 @@
 #include "core/error/error_list.h"
 #include "core/object/editor_language.h"
 #include "core/object/script_language.h"
+#include "core/templates/hash_set.h"
 #include "editor/docks/editor_dock.h"
 #include "editor/plugins/editor_plugin.h"
 #include "editor/script/script_editor_base.h"
@@ -133,6 +134,8 @@ class DocumentOutline : public VBoxContainer {
 
 	Control *current_editor = nullptr;
 	bool updating_outline = false;
+	HashSet<String> collapsed_groups;
+	bool filter_active = false;
 
 	void _toggle_sort(bool p_alphabetic_sort);
 	void _tree_selected();
